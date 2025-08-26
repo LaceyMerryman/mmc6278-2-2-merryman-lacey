@@ -8,37 +8,46 @@ program
   .description("CLI tool for inspiration")
   .version("0.1.0");
 
+  // Get a random quote
 program
   .command("getQuote")
   .description("Retrieves a random quote")
   .action(async () => {
     try {
       const data = await fs.readFile(QUOTE_FILE, "utf-8");
-      const lines = data.split("/n").filter(line => line.trim() !== "");
-      if (lines.length === 0) {
+
+      // Split lines, trim, filter empty
+      const lines = data.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+
+      if (!lines.length) {
         console.log(chalk.yellow("No quotes found."));
         return;
       }
+
+      // Pick random line
       const randomLine = lines[Math.floor(Math.random() * lines.length)];
-      const [quote, author] = random.Line.split("|");
-      console.log(chalk.green('"${quote.trim()}"'))
-      console.log(chalk.blue('_ ${author ? author.trim() : "Anonymous"}'));
+      const [quote, author] = randomLine.split("|");
+
+      // Log quote and author
+      console.log(`${quote}`);
+      console.log(`${author || "Anonymous"}`);
     } catch (err) {
-      console.error(chalk.red("Error reading quotes file:"), err.message);
+      console.error(err);
     }
   });
 
+  // Add a quote
 program
   .command("addQuote <quote> [author]")
-  .description("adds a quote to the quote file")
+  .description("Adds a quote to the quote file")
   .action(async (quote, author) => {
-    try {
-      const lineToAdd = '${quote.trim()}|${(author || "Anonymous").trim()}\n'; 
-      await fs.appendFile(QUOTE_FILE, lineToAdd);
-      console.log(chalk.green("Quote added successfully!"));
-      } catch (err) {
-        console.error(chalk.red("Error writing to quotes file:"), err.message);
-      }
+    if (!quote) throw new Error("Quote is required");
+
+    author = author || "Anonymous";
+    const lineToAdd = `${quote.trim()}|${author.trim()}\n`;
+
+    await fs.appendFile(QUOTE_FILE, lineToAdd);
   });
+
 
 program.parse();
