@@ -3,51 +3,57 @@ const fs = require("fs/promises");
 const chalk = require("chalk");
 const QUOTE_FILE = "quotes.txt";
 
+// CLI setup
 program
   .name("quotes")
   .description("CLI tool for inspiration")
   .version("0.1.0");
 
-  // Get a random quote
+// Retrieve a random quote
 program
   .command("getQuote")
   .description("Retrieves a random quote")
   .action(async () => {
     try {
       const data = await fs.readFile(QUOTE_FILE, "utf-8");
+      const lines = data.split("\n").map(line => line.trim()).filter(Boolean);
 
-      // Split lines, trim, filter empty
-      const lines = data.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length === 0) throw new Error("No quotes found");
 
-      if (!lines.length) {
-        console.log(chalk.yellow("No quotes found."));
-        return;
-      }
-
-      // Pick random line
       const randomLine = lines[Math.floor(Math.random() * lines.length)];
       const [quote, author] = randomLine.split("|");
 
-      // Log quote and author
-      console.log(`${quote}`);
-      console.log(`${author || "Anonymous"}`);
+      console.log(chalk.green(quote));
+      console.log(chalk.blue(author || "Anonymous"));
     } catch (err) {
-      console.error(err);
+      console.error("Error reading quotes file:", err.message);
+      process.exit(1);
     }
   });
 
-  // Add a quote
+// Add a quote
 program
   .command("addQuote <quote> [author]")
   .description("Adds a quote to the quote file")
   .action(async (quote, author) => {
-    if (!quote) throw new Error("Quote is required");
+    if (!quote) {
+      console.error("Error: Quote is required");
+      process.exit(1);
+    }
 
-    author = author || "Anonymous";
-    const lineToAdd = `${quote.trim()}|${author.trim()}\n`;
+    const line = `${quote.trim()}|${(author || "Anonymous").trim()}\n`;
 
-    await fs.appendFile(QUOTE_FILE, lineToAdd);
+    try {
+      await fs.appendFile(QUOTE_FILE, line);
+      console.log(chalk.yellow(`Quote added: "${quote}"`));
+    } catch (err) {
+      console.error("Error writing to quotes file:", err.message);
+      process.exit(1);
+    }
   });
 
-
-program.parse();
+// Use parseAsync to handle async actions properly
+program.parseAsync(process.argv).catch(err => {
+  console.error(err);
+  process.exit(1);
+});
